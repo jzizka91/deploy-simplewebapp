@@ -1,0 +1,9 @@
+---
+
+- hosts: all
+  gather_facts: false
+  tasks:
+    - include: tasks/install-python3.yml
+    - include: tasks/install-docker.yml
+    - include: tasks/deploy-webapp.yml
+    - include: tasks/deploy-nginx.yml

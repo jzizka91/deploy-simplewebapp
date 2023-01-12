@@ -1,0 +1,88 @@
+- name: Create Nginx directory for configuration
+  file:
+    path: /opt/nginx/etc/nginx/sites
+    state: directory
+    recurse: yes
+    owner: root
+    group: root
+
+- name: Create Nginx directory for certificates
+  file:
+    path: /opt/nginx/etc/nginx/certs
+    state: directory
+    recurse: yes
+    owner: root
+    group: root
+
+- name: Copy htpasswd
+  copy:
+    src: ../config/sites/htpasswd
+    dest: /opt/nginx/etc/nginx/sites/
+    owner: root
+    group: root
+    mode: 0644
+
+- name: Copy Nginx http configuration
+  copy:
+    src: ../config/sites/http/<domain>.conf
+    dest: /opt/nginx/etc/nginx/sites/<domain>.conf
+    owner: root
+    group: root
+    mode: 0644
+
+- name: Deploy Nginx
+  docker_container:
+    name: nginx
+    hostname: nginx
+    image: fialakarel/nginx
+    pull: yes
+    state: started
+    restart_policy: always
+    published_ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - "/etc/localtime:/etc/localtime:ro"
+      - "/etc/machine_id:/etc/machine_id:ro"
+      - "/opt/nginx/etc/nginx/sites:/etc/nginx/sites:ro"
+      - "/opt/nginx/etc/nginx/certs:/etc/nginx/certs:rw"
+
+- name: Copy generate-nginx-certs.sh
+  copy:
+    src: ../config/generate-nginx-certs.sh
+    dest: /opt/generate-nginx-certs.sh
+    owner: root
+    group: root
+    mode: 0750
+
+- name: Generate nginx ssl certs
+  shell: sh /opt/generate-nginx-certs.sh
+
+- name: Generate ssl_dhparam
+  openssl_dhparam:
+    path: /opt/nginx/etc/nginx/certs/dhparam.pem
+    size: 2048
+
+- name: Re-write Nginx config file with https version to enable SSL
+  copy:
+    src: ../config/sites/https/<domain>.conf
+    dest: /opt/nginx/etc/nginx/sites/<domain>.conf
+    owner: root
+    group: root
+    mode: 0644
+
+- name: Restart Nginx to load SSL changes.
+  docker_container:
+    name: nginx
+    state: started
+    restart: yes
+
+- name: Set CRON entry for generate-nginx-certs.sh
+  cron:
+    name: "generate-nginx-certs"
+    user: "root"
+    minute: "0"
+    hour: "1"
+    day: "1"
+    weekday: "*"
+    job: "/opt/generate-nginx-certs.sh"

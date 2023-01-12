@@ -1,0 +1,9 @@
+- name: Deploy Webapp
+  docker_container:
+    name: webapp
+    image: scottyc/webapp
+    pull: yes
+    state: started
+    restart_policy: always
+    published_ports:
+      - "172.17.0.1:3000:3000"

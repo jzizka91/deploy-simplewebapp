@@ -1,0 +1,21 @@
+# Check if Python3 is installed
+- name: Check if Python3 is installed in the container
+  raw: test -e /usr/bin/python3
+  failed_when: false
+  changed_when: false
+  register: python_check_is_installed
+
+# Install python3 if not installed
+- name: Install Python3 in the container
+  raw: apt-get -y update && apt-get install -y python3
+  when: python_check_is_installed.rc != 0
+
+- name: Check if pip is installed
+  raw: test -e /usr/bin/pip3
+  failed_when: false
+  changed_when: false
+  register: pip_check_is_installed
+
+- name: Install pip in the container
+  raw: apt-get -y update && apt-get install -y python3-pip && pip3 install docker-py
+  when: pip_check_is_installed.rc != 0
